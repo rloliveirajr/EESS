@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import br.ufmg.dcc.lac.LacInstance;
-import br.ufmg.dcc.lac.LacRule;
 
 public class EessInstance extends LacInstance implements EESSInstance{
 	
@@ -34,8 +33,8 @@ public class EessInstance extends LacInstance implements EESSInstance{
 	}
 	
 	@Override
-	public void computeMetrics(int n, int index, double rand, List<LacRule> rules){
-		double similarity = this.similarity(rules);
+	public void computeMetrics(int n, int index, double rand, EESSInstance targetInstance){
+		double similarity = this.similarity(targetInstance);
 		this.metrics.put("similarity", similarity);	
 		
 		double freshness = (double) this.tid / n;
@@ -98,34 +97,17 @@ public class EessInstance extends LacInstance implements EESSInstance{
 		return this.eessFeatures;
 	}
 		
-	public double similarity(List<LacRule> rules){
+	public double similarity(EESSInstance targetInstance){
+		final Set<String> union = new HashSet<String>();
+		final Set<String> intersection = new HashSet<String>();
+
+		union.addAll(this.getEessFeatures());
+		union.addAll(targetInstance.getEessFeatures());
 		
-		double coverage = 0;
-				
-		final Set<Integer> intersection = new HashSet<Integer>();
-		final Set<Integer> iFeatures = new HashSet<Integer>();
-		final Set<Integer> features = new HashSet<Integer>();
+		intersection.addAll(this.getEessFeatures());
+		intersection.retainAll(targetInstance.getEessFeatures());
 
-		features.clear();
-		for (int f : this.getFeaturesIndexed()) {
-			features.add(f);
-		}
-
-		for (LacRule r : rules) {
-			iFeatures.clear();
-			for (int f : r.getFeaturesIds()) {
-				iFeatures.add(f);
-			}
-
-			intersection.clear();
-			intersection.addAll(features);
-			intersection.retainAll(iFeatures);
-
-			if(intersection.size() == this.getFeaturesIndexed().size()){
-				coverage++;
-			}
-		}
-		return coverage / rules.size();
+		return intersection.size() / union.size();
 	}
 
 	public static void normalize(List<LacInstance> instances){

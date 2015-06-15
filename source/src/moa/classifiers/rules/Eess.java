@@ -1,8 +1,10 @@
 package moa.classifiers.rules;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.Vector;
 
 import br.ufmg.dcc.lac.AssociationRule;
@@ -40,8 +42,24 @@ public class Eess extends AbstractClassifier {
 			"considerFeaturesPosition", 'p',
 			"Consider the position of features.");
 	
+	public FlagOption similarityOption = new FlagOption(
+			"similarity", 'S',
+			"Consider the position of features.");
+	
+	public FlagOption freshnessOption = new FlagOption(
+			"freshness", 'F',
+			"Consider the position of features.");
+	
+	public FlagOption randomnessOption = new FlagOption(
+			"randomness", 'R',
+			"Consider the position of features.");
+	
+	public FlagOption meanSimilarityOption = new FlagOption(
+			"meanSimilarity", 'M',
+			"Consider the position of features.");
+
 	protected final List<LacInstance> eessInstances;
-	protected final List<LacRule> previousRules;
+	protected final Set<EessInstance> previousRules;
 	protected final Training training;
 	protected AssociationRule associationRule;
 	protected final Random rand;
@@ -65,7 +83,7 @@ public class Eess extends AbstractClassifier {
 	
 	public Eess() {
 		this.eessInstances = new Vector<LacInstance>();
-		this.previousRules = new Vector<LacRule>();
+		this.previousRules = new HashSet<EessInstance>();
 
 		this.training = new Training();
 		this.rand = new Random(this.randomSeed);
@@ -118,6 +136,8 @@ public class Eess extends AbstractClassifier {
 			boolean insert = Double.compare(rand.nextDouble(), this.budgetOption.getValue()) < 0;
 			
 			if(insert){
+				
+				// Inserting instance
 				this.labeledAdded++;
 				this.eessInstances.add(targetInstance);
 			}
@@ -131,15 +151,27 @@ public class Eess extends AbstractClassifier {
 	protected void eess(EessInstance targetInstance) {
 
 		if(this.metricsList.size() == 0){
-			metricsList.add("similarity");			
-			metricsList.add("freshness");
-			metricsList.add("randomness");
+			if(this.similarityOption.isSet()){
+				metricsList.add("similarity");
+			}
+			
+			if(this.freshnessOption.isSet()){
+				metricsList.add("freshness");
+			}
+			
+			if(this.randomnessOption.isSet()){
+				metricsList.add("randomness");
+			}
+			
+			if(this.meanSimilarityOption.isSet()){
+				metricsList.add("meanSimilarity");
+			}
 		}
 		
 		int index = 0;
 		for(LacInstance lac_i : this.eessInstances){
 			EessInstance i = (EessInstance) lac_i;
-			i.computeMetrics(this.timestamp, index++, rand.nextGaussian(), this.previousRules);
+			i.computeMetrics(this.timestamp, index++, rand.nextGaussian(), targetInstance);
 		}	
 		List<EessInstance> skyline = new Vector<EessInstance>();
 		List<EessInstance> dominated = new Vector<EessInstance>();
@@ -160,7 +192,7 @@ public class Eess extends AbstractClassifier {
 		
 		for (int i = 0; i < this.eessInstances.size(); i++) {
 			final EessInstance instance = (EessInstance) this.eessInstances.get(i);
-			instance.computeMetrics(this.timestamp, i, this.rand.nextGaussian(), this.previousRules);
+			instance.computeMetrics(this.timestamp, i, this.rand.nextGaussian(), targetInstance);
 
 			skyline.addPoint(instance);
 		}
@@ -225,7 +257,7 @@ public class Eess extends AbstractClassifier {
 			instance.setIndexedClass(predicted);
 			
 
-			this.previousRules.addAll(rules);
+			this.previousRules.add(instance);
 
 		} else {
 			final double equalVotes = 1.0 / arg0.numClasses();
@@ -268,4 +300,46 @@ public class Eess extends AbstractClassifier {
 
 		return m;
 	}
+//
+//	private double[] similarity() {
+//		double[] coverage = new double[this.lacInstances.size()];
+//
+//		Arrays.fill(coverage, 0);
+//
+//		final Set<String> union = new HashSet<String>();
+//		final Set<String> intersection = new HashSet<String>();
+//		final Set<String> iFeatures = new HashSet<String>();
+//		final Set<String> features = new HashSet<String>();
+//
+//		EessInstance instance = null;
+//		for (int i = 0; i < this.lacInstances.size(); i++) {
+//			instance = this.lacInstances.get(i);
+//			features.clear();
+//			for (String f : instance.getFeatures()) {
+//				features.add(f);
+//			}
+//
+//			for (EessInstance r : this.previousRules) {
+//				iFeatures.clear();
+//				for (String f : r.getFeatures()) {
+//					union.add(f);
+//					iFeatures.add(f);
+//				}
+//
+//				union.clear();
+//				union.addAll(features);
+//
+//				intersection.clear();
+//				intersection.addAll(features);
+//				intersection.retainAll(iFeatures);
+//
+//				// Jaccard Similarity
+//				coverage[i] += (double) intersection.size() / union.size();
+//			}
+//
+//			coverage[i] /= (double) this.previousRules.size();
+//		}
+//
+//		return coverage;
+//	}
 }
